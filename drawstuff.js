@@ -514,15 +514,21 @@ function main() {
     var imagedata = context.createImageData(w,h);
     
     // define polygon and view
-    var testEye = new Vector(0,0,0);
-    var testAt = Vector.subtract(new Vector(0,0,10),testEye);
-    var view = {eye:testEye, at:testAt, up:new Vector(0,1,0)};
+    var lerp = function(v1,v2,t) {return(Vector.add(v1,Vector.scale(t,Vector.subtract(v2,v1))));}; // v1 to v2 at t
     var poly = [{x:-5,y:5,z:10,c:new Color(255,0,0,255)}, {x:5,y:5,z:10,c:new Color(0,255,0,255)}, 
                 {x:5,y:-5,z:10,c:new Color(0,0,0,255)}, {x:-5,y:-5,z:10,c:new Color(0,0,255,255)}];
     
     // Define and render a rectangle in 2D with colors and coords at corners
-    projectPoly(imagedata,poly,view);
-    fillPoly(imagedata,poly);
-    
-    context.putImageData(imagedata, 0, 0); // display the image in the context
+    requestAnimationFrame(function drawFrame(now) {
+        drawFrame.t0 = drawFrame.t0 || now; // anchor the loop on the first frame
+        var t = 1-Math.abs(1-((now-drawFrame.t0)%8000)/4000); // ping pong 0 to 1 to 0, 8 sec loop
+        var eye = lerp(new Vector(-5,2,0),new Vector(0,0,0),t);
+        var view = {eye:eye, at:Vector.subtract(lerp(new Vector(0,1,10),new Vector(0,0,10),t),eye), up:lerp(new Vector(0,1,0),new Vector(1,1,0),t)};
+        var frame = poly.map(function(v) {return({x:v.x,y:v.y,z:v.z,c:v.c});}); // projectPoly overwrites x and y
+        imagedata = context.createImageData(w,h); // start the frame empty
+        projectPoly(imagedata,frame,view);
+        fillPoly(imagedata,frame);
+        context.putImageData(imagedata, 0, 0); // display the image in the context
+        requestAnimationFrame(drawFrame);
+    });
 }
